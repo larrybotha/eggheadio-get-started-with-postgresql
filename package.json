@@ -1,0 +1,25 @@
+{
+  "name": "eggheadio-get-started-with-postgresql",
+  "version": "1.0.0",
+  "description": "Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get Started With PostgreSQL",
+  "main": ".huskyrc.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/larrybotha/eggheadio-get-started-with-postgresql.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/larrybotha/eggheadio-get-started-with-postgresql/issues"
+  },
+  "homepage": "https://github.com/larrybotha/eggheadio-get-started-with-postgresql#readme",
+  "devDependencies": {
+    "doctoc": "^1.4.0",
+    "husky": "^3.0.4",
+    "lint-staged": "^9.2.3"
+  }
+}

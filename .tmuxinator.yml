@@ -1,0 +1,10 @@
+name: get-started-with-postgres
+root: <%= Dir.pwd %>
+
+windows:
+  - frontend:
+      layout: main-vertical
+      panes:
+        - vim README.md
+        - docker-compose up
+        - sleep 2 && docker-compose exec get_started_with_postgresql psql -U postgres
