@@ -8,6 +8,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
 
 - [Running a local db](#running-a-local-db)
 - [1. Create a Postgres Table](#1-create-a-postgres-table)
+- [2. Insert Data into Postgres Tables](#2-insert-data-into-postgres-tables)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -109,3 +110,5 @@ SELECT * FROM movies;
   2 | Funny people | 2009-07-20   |           5 |           2
 (2 rows)
 ```
+
+## 2. Insert Data into Postgres Tables
