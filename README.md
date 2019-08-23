@@ -10,6 +10,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
 - [1. Create a Postgres Table](#1-create-a-postgres-table)
 - [2. Insert Data into Postgres Tables](#2-insert-data-into-postgres-tables)
   - [Constraints, errors and caveats](#constraints-errors-and-caveats)
+- [3. Filter Data in a Postgres Table with Query Statements](#3-filter-data-in-a-postgres-table-with-query-statements)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -234,3 +235,5 @@ INSERT INTO movies (release_date, title, count_stars, director_id)
 
 INSERT 0 1
 ```
+
+## 3. Filter Data in a Postgres Table with Query Statements
