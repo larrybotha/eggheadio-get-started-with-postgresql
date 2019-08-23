@@ -9,6 +9,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
 - [Running a local db](#running-a-local-db)
 - [1. Create a Postgres Table](#1-create-a-postgres-table)
 - [2. Insert Data into Postgres Tables](#2-insert-data-into-postgres-tables)
+  - [Constraints, errors and caveats](#constraints-errors-and-caveats)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -112,3 +113,124 @@ SELECT * FROM movies;
 ```
 
 ## 2. Insert Data into Postgres Tables
+
+Let's clear our previous data before entering new data:
+
+```sql
+TRUNCATE movies;
+TRUNCATE directors;
+```
+
+Let's insert the same record a number of times:
+
+```sql
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+
+SELECT * FROM directors;
+
+ id |       name
+----+-------------------
+  1 | Quentin Tarantino
+  2 | Quentin Tarantino
+  3 | Quentin Tarantino
+  4 | Quentin Tarantino
+  5 | Quentin Tarantino
+  6 | Quentin Tarantino
+  7 | Quentin Tarantino
+(7 rows)
+```
+
+Multiple values can be inserted:
+
+```sql
+INSERT INTO directors (name)
+  VALUES ('Judd Apatow'), ('Mel Brooks');
+
+SELECT * FROM directors;
+
+ id |       name
+----+-------------------
+  1 | Quentin Tarantino
+  2 | Quentin Tarantino
+  3 | Quentin Tarantino
+  4 | Quentin Tarantino
+  5 | Quentin Tarantino
+  6 | Quentin Tarantino
+  7 | Quentin Tarantino
+  8 | Judd Apatow
+  9 | Mel Brooks
+(9 rows)
+```
+
+### Constraints, errors and caveats
+
+We can't insert null values for name because of the table definition:
+
+```sql
+INSERT INTO directors (name) VALUES (NULL);
+
+ERROR:  null value in column "name" violates not-null constraint
+DETAIL:  Failing row contains (10, null).
+```
+
+We can manually set the id, despite it being an autoincrementing field:
+
+```sql
+INSERT INTO directors (id, name) VALUES (200, 'Some director');
+
+SELECT * FROM directors;
+
+ id  |       name
+-----+-------------------
+   1 | Quentin Tarantino
+   2 | Quentin Tarantino
+   3 | Quentin Tarantino
+   4 | Quentin Tarantino
+   5 | Quentin Tarantino
+   6 | Quentin Tarantino
+   7 | Quentin Tarantino
+   8 | Judd Apatow
+   9 | Mel Brooks
+ 200 | Some director
+(10 rows)
+```
+
+But at some point we're going to get an error when a record is entered after
+record 199, and the database attempts to create a record with an existing id.
+
+Don't set values on auto-incrementing columns;
+
+```sql
+DELETE FROM directors WHERE id = 200;
+```
+
+Postgres will notify us when attempting to insert incorrect values:
+
+```sql
+-- insert an invalid date value
+INSERT INTO movies (release_date, title, count_stars, director_id)
+  VALUES ('111-11-2011', 'My little pony', 4, 1);
+
+ERROR:  date/time field value out of range: "111-11-2011"
+LINE 2:   VALUES ('111-11-2011', 'My little pony', 4, 1);
+                  ^
+HINT:  Perhaps you need a different "datestyle" setting.
+```
+
+Attempting to insert an invalid type into a field for which the type is
+parseable may not result in an error. e.g. inserting a number into a string
+field:
+
+```sql
+INSERT INTO movies (release_date, title, count_stars, director_id)
+  -- insert a number for title, instead of string
+  VALUES ('11-11-2011', 1, 3, 1);
+
+INSERT 0 1
+```
