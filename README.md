@@ -20,6 +20,8 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
     - [`AVG`](#avg)
   - [Adding columns to the temporary table](#adding-columns-to-the-temporary-table)
     - [Casting column values to different types](#casting-column-values-to-different-types)
+- [4. Update Data in Postgres](#4-update-data-in-postgres)
+  - [Evaluating the affected rows before running an update](#evaluating-the-affected-rows-before-running-an-update)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -426,3 +428,71 @@ SELECT *, CAST (count_stars AS float) / 5 AS rotten_tomatoes_score FROM movies;
   3 | Blazing Saddles | 1974-02-07   |           5 |           3 |                     1
 (3 rows)
 ```
+
+## 4. Update Data in Postgres
+
+Let's say we want to update `count_stars` in our `movies` table:
+
+```sql
+UPDATE movies SET count_stars = 1;
+-- [1]  [2]   [3]            [4]
+
+-- [1] indicate using the UPDATE command that we're going to update a table
+-- [2] provide the name of the table we're updating
+-- [3] use the SET command to indicate we're beginning the expression that will
+--     update something
+-- [4] provide the column to update, and the value to update it to
+
+SELECT * FROM movies;
+
+ id |      title      | release_date | count_stars | director_id
+----+-----------------+--------------+-------------+-------------
+  1 | Kill Bill       | 2003-10-10   |           1 |           1
+  2 | Funny People    | 2009-07-20   |           1 |           2
+  3 | Blazing Saddles | 1974-02-07   |           1 |           3
+(3 rows)
+```
+
+This query update every row's `count_stars` value to 1. This is because
+`UPDATE`, like `SELECT` operates like a loop on all of the rows in the specified
+table.
+
+To limit updates to specific rows, we need to add a `WHERE` statement. We can
+target one of our movies:
+
+```sql
+UPDATE movies SET count_stars = 5
+  WHERE title = 'Kill Bill';
+
+SELECT * FROM movies;
+
+-- only Kill Bill was updated
+ id |      title      | release_date | count_stars | director_id
+----+-----------------+--------------+-------------+-------------
+  2 | Funny People    | 2009-07-20   |           1 |           2
+  3 | Blazing Saddles | 1974-02-07   |           1 |           3
+  1 | Kill Bill       | 2003-10-10   |           5 |           1
+(3 rows)
+```
+
+We can also update a subset of our movies
+
+```sql
+UPDATE movies SET count_stars = 5
+  WHERE count_stars = 1;
+
+SELECT * FROM movies;
+
+-- movies that had count_stars = 1 are updated
+ id |      title      | release_date | count_stars | director_id
+----+-----------------+--------------+-------------+-------------
+  2 | Funny People    | 2009-07-20   |           3 |           2
+  3 | Blazing Saddles | 1974-02-07   |           3 |           3
+  1 | Kill Bill       | 2003-10-10   |           5 |           1
+(3 rows)
+```
+
+### Evaluating the affected rows before running an update
+
+It's useful to determine which rows will be affected before running the `UPDATE`
+on the rows:
