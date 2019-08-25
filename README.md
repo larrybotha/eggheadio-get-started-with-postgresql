@@ -11,6 +11,15 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
 - [2. Insert Data into Postgres Tables](#2-insert-data-into-postgres-tables)
   - [Constraints, errors and caveats](#constraints-errors-and-caveats)
 - [3. Filter Data in a Postgres Table with Query Statements](#3-filter-data-in-a-postgres-table-with-query-statements)
+  - [Selecting specific columns](#selecting-specific-columns)
+  - [Renaming columns in the query using `AS`](#renaming-columns-in-the-query-using-as)
+  - [Filtering results in the query using `WHERE`](#filtering-results-in-the-query-using-where)
+  - [Aggregations](#aggregations)
+    - [`COUNT`](#count)
+    - [`SUM`](#sum)
+    - [`AVG`](#avg)
+  - [Adding columns to the temporary table](#adding-columns-to-the-temporary-table)
+    - [Casting column values to different types](#casting-column-values-to-different-types)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -237,3 +246,183 @@ INSERT 0 1
 ```
 
 ## 3. Filter Data in a Postgres Table with Query Statements
+
+Let's start with a fresh db by dropping our `directors` and `movies` tables and
+recreating them before inserting data:
+
+```sql
+INSERT INTO directors (name)
+  VALUES
+    ('Quention Tarantino'), ('Judd Apatow'), ('Mel Brooks');
+
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES
+    ('Kill Bill', '2003-10-10', 3, 1),
+    ('Funny People', '2009-07-20', 5, 2),
+    ('Blazing Saddles', '1974-02-07', 5, 3);
+```
+
+### Selecting specific columns
+
+We can select specific columns from a table:
+
+```sql
+SELECT title, release_date FROM movies;
+
+      title      | release_date
+-----------------+--------------
+ Kill Bill       | 2003-10-10
+ Funny People    | 2009-07-20
+ Blazing Saddles | 1974-02-07
+(3 rows)
+```
+
+This is a new table we're creating that's available only for the duration of the
+query; a temporary table.
+
+### Renaming columns in the query using `AS`
+
+We can rename columns in the temporary table, too:
+
+```sql
+SELECT title, release_date AS release FROM movies;
+
+      title      |  release
+-----------------+------------
+ Kill Bill       | 2003-10-10
+ Funny People    | 2009-07-20
+ Blazing Saddles | 1974-02-07
+(3 rows)
+```
+
+### Filtering results in the query using `WHERE`
+
+We can filter rows to be returned in the query by using the `WHERE` statement to
+provide conditions under which rows should be returned:
+
+```sql
+SELECT title, release_date AS release FROM movies
+  WHERE release_date > '01-01-1975';
+
+    title     |  release
+--------------+------------
+ Kill Bill    | 2003-10-10
+ Funny People | 2009-07-20
+(2 rows)
+```
+
+Conditions can be combined with conjunctions and disjunctions:
+
+```sql
+-- conjunction
+SELECT title, release_date AS release FROM movies
+  WHERE release_date > '01-01-1975'
+    AND count_stars = 3;
+
+    title     |  release
+--------------+------------
+ Funny People | 2009-07-20
+(1 row)
+
+-- disjunction
+SELECT title, release_date AS release FROM movies
+  WHERE release_date > '01-01-1975'
+    OR count_stars = 3;
+
+    title     |  release
+--------------+------------
+ Kill Bill    | 2003-10-10
+ Funny People | 2009-07-20
+(2 rows)
+```
+
+### Aggregations
+
+We have a few aggregations available to us:
+
+#### `COUNT`
+
+Count the number of rows in a table:
+
+```sql
+SELECT COUNT(*) FROM movies;
+
+ count
+-------
+     3
+(1 row)
+```
+
+#### `SUM`
+
+Get the total for a specific column:
+
+```sql
+SELECT SUM(count_stars) FROM movies;
+
+ sum
+-----
+  13
+(1 row)
+```
+
+####  `AVG`
+
+Retrieve the average for a specific column:
+
+```sql
+SELECT AVG(count_stars) FROM movies;
+
+        avg
+--------------------
+ 4.3333333333333333
+(1 row)
+```
+
+### Adding columns to the temporary table
+
+We can create a temporary table that has columns in it that don't exist in the
+queried table or tables:
+
+```sql
+SELECT *, count_stars / 5 AS rotten_tomatoes_score FROM movies;
+
+ id |      title      | release_date | count_stars | director_id | rotten_tomatoes_score
+----+-----------------+--------------+-------------+-------------+-----------------------
+  1 | Kill Bill       | 2003-10-10   |           3 |           1 |                     0
+  2 | Funny People    | 2009-07-20   |           5 |           2 |                     1
+  3 | Blazing Saddles | 1974-02-07   |           5 |           3 |                     1
+(3 rows)
+```
+
+#### Casting column values to different types
+
+The value in the `rotten_tomatoes_score` columns isn't too valuable here, as
+Postgres has rounded the result of `count_stars / 5`. To fix this, we can cast
+the column being operated on to a floating-point number:
+
+```sql
+-- use the :: operator to cast a column to a desired type
+SELECT *, (count_stars::float / 5) AS rotten_tomatoes_score FROM movies;
+
+ id |      title      | release_date | count_stars | director_id | rotten_tomatoes_score
+----+-----------------+--------------+-------------+-------------+-----------------------
+  1 | Kill Bill       | 2003-10-10   |           3 |           1 |                   0.6
+  2 | Funny People    | 2009-07-20   |           5 |           2 |                     1
+  3 | Blazing Saddles | 1974-02-07   |           5 |           3 |                     1
+(3 rows)
+```
+
+The `::` syntax is specific to Postgres. There is a `CAST` syntax that conforms
+to the SQL standard, too:
+
+```sql
+SELECT *, CAST (count_stars AS float) / 5 AS rotten_tomatoes_score FROM movies;
+
+ id |      title      | release_date | count_stars | director_id | rotten_tomatoes_score
+----+-----------------+--------------+-------------+-------------+-----------------------
+  1 | Kill Bill       | 2003-10-10   |           3 |           1 |                   0.6
+  2 | Funny People    | 2009-07-20   |           5 |           2 |                     1
+  3 | Blazing Saddles | 1974-02-07   |           5 |           3 |                     1
+(3 rows)
+```
