@@ -495,4 +495,6 @@ SELECT * FROM movies;
 ### Evaluating the affected rows before running an update
 
 It's useful to determine which rows will be affected before running the `UPDATE`
-on the rows:
+on the rows.
+
+Make it a habit to inspect rows that will be updated before updating them.
