@@ -23,6 +23,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
 - [4. Update Data in Postgres](#4-update-data-in-postgres)
   - [Evaluating the affected rows before running an update](#evaluating-the-affected-rows-before-running-an-update)
 - [5. Delete Postgres Records](#5-delete-postgres-records)
+- [6. Group and Aggregate Data in Postgres](#6-group-and-aggregate-data-in-postgres)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -560,3 +561,24 @@ SELECT * FROM movies WHERE title LIKE '%Kill';
 Like `SELECT` and `UPDATE`, `DELETE` operates by looping over all records in a
 table. If no conditions are provided, all rows in the specified table will be
 deleted.
+
+## 6. Group and Aggregate Data in Postgres
+
+We'll need to add more data to evaluate grouping and aggregrating effectively:
+
+```bash
+# create a sql file that will copy the data
+$ echo "COPY movies FROM '`pwd`/lesson-06/movies.csv' DELIMITER ',' CSV NULL 'NA' HEADER;" >> ./lesson-06/movies.sql
+
+# execute the create and insert sql files
+```
+
+Postgres has command line executables for creating and dropping databases:
+
+```bash
+# drop a specific database
+$ dropdb [db_name]
+
+# create a new database
+$ createdb [db_name]
+```
