@@ -22,6 +22,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
     - [Casting column values to different types](#casting-column-values-to-different-types)
 - [4. Update Data in Postgres](#4-update-data-in-postgres)
   - [Evaluating the affected rows before running an update](#evaluating-the-affected-rows-before-running-an-update)
+- [5. Delete Postgres Records](#5-delete-postgres-records)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -38,6 +39,9 @@ $ docker-compose up
 # connect to the psql instance
 $ docker-compose exec sql_fundamentals psql -U postgres
 ```
+
+If you're looking for a PostgreSQL client, [SQL Pro](https://macpostgresclient.com/)
+may be useful.
 
 ## 1. Create a Postgres Table
 
@@ -498,3 +502,61 @@ It's useful to determine which rows will be affected before running the `UPDATE`
 on the rows.
 
 Make it a habit to inspect rows that will be updated before updating them.
+
+## 5. Delete Postgres Records
+
+Let's add a few dummy records to delete:
+
+```sql
+INSERT INTO movies (title, release_date, count_stars)
+  VALUES
+    ('Kill Bill 1', '1999-01-01', 91),
+    ('Kill Bill 2', '1999-01-01', 92),
+    ('Kill Bill 3', '1999-01-01', 93),
+    ('Kill Bill 4', '1999-01-01', 94);
+```
+
+Before we delete anything from our db, let's check what we're going to delete.
+In this case, let's delete rows where `count_stars` is greater than 90. We
+expect to have 4 records:
+
+```sql
+-- check that we get what we expect for the query we'll use to delete the rows
+SELECT COUNT(*) FROM movies WHERE count_stars > 90;
+
+ count
+-------
+     4
+(1 row)
+
+DELETE FROM movies WHERE count_stars > 90;
+DELETE 4
+```
+
+We can now check that we only have our original Kill Bill row:
+
+```sql
+SELECT * FROM movies WHERE title LIKE '%Kill';
+
+ id |   title   | release_date | count_stars | director_id
+----+-----------+--------------+-------------+-------------
+  1 | Kill Bill | 2003-10-10   |           5 |           1
+(1 row)
+```
+
+`DELETE` is idempotent, too:
+
+```sql
+DELETE FROM movies WHERE count_stars > 90;
+
+SELECT * FROM movies WHERE title LIKE '%Kill';
+
+ id |   title   | release_date | count_stars | director_id
+----+-----------+--------------+-------------+-------------
+  1 | Kill Bill | 2003-10-10   |           5 |           1
+(1 row)
+```
+
+Like `SELECT` and `UPDATE`, `DELETE` operates by looping over all records in a
+table. If no conditions are provided, all rows in the specified table will be
+deleted.
