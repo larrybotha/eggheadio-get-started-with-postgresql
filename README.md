@@ -597,6 +597,8 @@ COPY 58788
 # connect to the new database
 $ psql -U postgres
 $ \c aggregate
+You are now connected to database "aggregate" as user "postgres".
+
 $ \d
 
               List of relations
