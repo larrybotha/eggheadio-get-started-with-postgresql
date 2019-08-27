@@ -4,5 +4,7 @@ version: '3.1'
 services:
   get_started_with_postgresql:
     image: postgres:9.6.4
+    volumes:
+      - ./lesson-06:/var/lib/postgresql/data/lesson-06
     environment:
       POSTGRES_PASSWORD: example

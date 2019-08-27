@@ -564,15 +564,6 @@ deleted.
 
 ## 6. Group and Aggregate Data in Postgres
 
-We'll need to add more data to evaluate grouping and aggregrating effectively:
-
-```bash
-# create a sql file that will copy the data
-$ echo "COPY movies FROM '`pwd`/lesson-06/movies.csv' DELIMITER ',' CSV NULL 'NA' HEADER;" >> ./lesson-06/movies.sql
-
-# execute the create and insert sql files
-```
-
 Postgres has command line executables for creating and dropping databases:
 
 ```bash
@@ -582,3 +573,38 @@ $ dropdb [db_name]
 # create a new database
 $ createdb [db_name]
 ```
+
+We'll need to add more data to evaluate grouping and aggregrating effectively:
+
+```bash
+# connect to the container
+$ docker-compose exec get_started_with_postgresql bash
+
+# cd into the data folder
+cd /var/lib/postgresql/data/lesson-06
+
+# create a sql file with a command to copy the data
+$ echo "COPY movies FROM '`pwd`/movies.csv' DELIMITER ',' CSV NULL 'NA' HEADER;" > ./movies.sql
+
+# create a database for aggregration
+$ createdb aggregate -U postgres -f create.sql
+CREATE TABLE
+
+# insert movies data into the table
+$ psql -d aggregate -U postgres -f movies.sql
+COPY 58788
+
+# connect to the new database
+$ psql -U postgres
+$ \c aggregate
+$ \d
+
+              List of relations
+ Schema |     Name      |   Type   |  Owner
+--------+---------------+----------+----------
+ public | movies        | table    | postgres
+ public | movies_id_seq | sequence | postgres
+(2 rows)
+```
+
+We've now got 58788 rows in our `movies` table in our new `aggregate` database.
