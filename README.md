@@ -27,6 +27,8 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
   - [Using `LIMIT` to reduce overhead on queries](#using-limit-to-reduce-overhead-on-queries)
   - [Using `GROUP BY` to aggregate results](#using-group-by-to-aggregate-results)
   - [Using `ORDER BY` to order the results of a query](#using-order-by-to-order-the-results-of-a-query)
+  - [Using `ROUND` to get estimates](#using-round-to-get-estimates)
+  - [Aggregating on multiple fields using `CASE ... WHEN ... THEN ... ELSE ... END`](#aggregating-on-multiple-fields-using-case--when--then--else--end)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -714,6 +716,7 @@ columns to determine which columnd to order the results by:
 SELECT rating FROM movies
   GROUP BY rating
   ORDER BY 1;
+  -- '1' is equivalent to `rating`
 
  rating
 --------
@@ -728,3 +731,188 @@ SELECT rating FROM movies
 ```
 
 In this query, 1 represents `rating`.
+
+`ORDER BY` limits rows to explicit values.
+
+We can now see how many movies there are for each rating:
+
+```sql
+SELECT rating, COUNT(*) FROM movies
+  GROUP BY rating
+  ORDER BY 1;
+
+ rating | count
+--------+-------
+      1 |   106
+    1.1 |    44
+    1.2 |    36
+    ...
+    9.8 |    63
+    9.9 |    20
+     10 |     3
+(91 rows)
+```
+
+This is still a lot of information.
+
+### Using `ROUND` to get estimates
+
+Instead of viewing every decimal rating from 0 to 10, we can use the `ROUND`
+function to estimate the values, and return a more histogram-like result:
+
+```sql
+SELECT ROUND(rating), COUNT(*) FROM movies
+  GROUP BY ROUND(rating)
+  ORDER BY 1;
+
+ round | count
+-------+-------
+     1 |   272
+     2 |  1298
+     3 |  2685
+     4 |  6309
+     5 |  9509
+     6 | 17233
+     7 | 12506
+     8 |  6993
+     9 |  1689
+    10 |   294
+(10 rows)
+```
+
+As a convenience we can also using the column index in our `GROUP BY` statement:
+
+```sql
+SELECT ROUND(rating), COUNT(*) FROM movies
+  GROUP BY 1
+  ORDER BY 1;
+
+ round | count
+-------+-------
+     1 |   272
+     2 |  1298
+     3 |  2685
+     4 |  6309
+     5 |  9509
+     6 | 17233
+     7 | 12506
+     8 |  6993
+     9 |  1689
+    10 |   294
+(10 rows)
+```
+
+We can see that 272 movies have an approximate 1 star rating, 1298 have 2 stars,
+etc.
+
+Aggregations allow us to ask questions about specific fields and evaluate the
+underlying data.
+
+### Aggregating on multiple fields using `CASE ... WHEN ... THEN ... ELSE ... END`
+
+The kind of aggregation done up until this point has been easy because we've
+only been evaluating a single field. `GROUP BY` is great for aggregating on a
+single column, but it's not going to cut should we aggregate on multiple
+columns.
+
+In our movies table, we have a number of genres with boolean types:
+
+- action
+- animation
+- comedy
+- drama
+- documentary
+- romance
+- short
+
+An alterntive to `GROUP BY` is the `CASE ... WHEN ... THEN` statement. `CASE`
+forms part of the `SELECT` statement's column declarations:
+
+```sql
+SELECT title,
+  CASE
+    WHEN action = true THEN 'action'
+    ELSE 'other'
+    END
+  FROM movies
+  LIMIT 10;
+
+          title           |  case
+--------------------------+--------
+ $                        | other
+ $1000 a Touchdown        | other
+ $21 a Day Once a Month   | other
+ $40,000                  | other
+ $50,000 Climax Show, The | other
+ $pent                    | other
+ $windle                  | action
+ '15'                     | other
+ '38                      | other
+ '49-'17                  | other
+(10 rows)
+```
+
+We can add the remaining genres to get a better picture of our movies:
+
+
+```sql
+SELECT title,
+  CASE
+    WHEN action = true THEN 'action'
+    WHEN animation = true THEN 'animation'
+    WHEN comedy = true THEN 'comedy'
+    WHEN drama = true THEN 'drama'
+    WHEN documentary = true THEN 'documentary'
+    WHEN romance = true THEN 'romance'
+    WHEN short = true THEN 'short'
+    ELSE 'other'
+    END
+  FROM movies
+  LIMIT 10;
+
+          title           |    case
+--------------------------+-------------
+ $                        | comedy
+ $1000 a Touchdown        | comedy
+ $21 a Day Once a Month   | animation
+ $40,000                  | comedy
+ $50,000 Climax Show, The | other
+ $pent                    | drama
+ $windle                  | action
+ '15'                     | documentary
+ '38                      | drama
+ '49-'17                  | other
+(10 rows)
+```
+
+We have a `case` column which isn't too meaningful, so we can rename it:
+
+```sql
+SELECT title,
+  CASE
+    WHEN action = true THEN 'action'
+    WHEN animation = true THEN 'animation'
+    WHEN comedy = true THEN 'comedy'
+    WHEN drama = true THEN 'drama'
+    WHEN documentary = true THEN 'documentary'
+    WHEN romance = true THEN 'romance'
+    WHEN short = true THEN 'short'
+    ELSE 'other'
+    END AS genre
+  FROM movies
+  LIMIT 10;
+
+          title           |    genre
+--------------------------+-------------
+ $                        | comedy
+ $1000 a Touchdown        | comedy
+ $21 a Day Once a Month   | animation
+ $40,000                  | comedy
+ $50,000 Climax Show, The | other
+ $pent                    | drama
+ $windle                  | action
+ '15'                     | documentary
+ '38                      | drama
+ '49-'17                  | other
+(10 rows)
+```
