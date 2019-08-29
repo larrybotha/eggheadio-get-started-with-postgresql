@@ -24,6 +24,9 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
   - [Evaluating the affected rows before running an update](#evaluating-the-affected-rows-before-running-an-update)
 - [5. Delete Postgres Records](#5-delete-postgres-records)
 - [6. Group and Aggregate Data in Postgres](#6-group-and-aggregate-data-in-postgres)
+  - [Using `LIMIT` to reduce overhead on queries](#using-limit-to-reduce-overhead-on-queries)
+  - [Using `GROUP BY` to aggregate results](#using-group-by-to-aggregate-results)
+  - [Using `ORDER BY` to order the results of a query](#using-order-by-to-order-the-results-of-a-query)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -610,3 +613,118 @@ $ \d
 ```
 
 We've now got 58788 rows in our `movies` table in our new `aggregate` database.
+
+We can see all the count of the records we inserted:
+
+```sql
+SELECT COUNT(*) FROM movies;
+
+ count
+-------
+ 58788
+(1 row)
+```
+
+### Using `LIMIT` to reduce overhead on queries
+
+We can select a subset of the records so as to increase the speed of a query:
+
+```sql
+SELECT * FROM movies
+  LIMIT 10;
+
+ id |          title           | year | length | budget | rating | votes |  r1  |  r2  | r3  |  r4  |  r5  |  r6  |  r7  |  r8  |  r9  | r10  | mpaa | action | animation | comedy | drama | documentary | romance | short
+----+--------------------------+------+--------+--------+--------+-------+------+------+-----+------+------+------+------+------+------+------+------+--------+-----------+--------+-------+-------------+---------+-------
+  1 | $                        | 1971 |    121 |        |    6.4 |   348 |  4.5 |  4.5 | 4.5 |  4.5 | 14.5 | 24.5 | 24.5 | 14.5 |  4.5 |  4.5 |      | f      | f         | t      | t     | f           | f       | f
+  2 | $1000 a Touchdown        | 1939 |     71 |        |      6 |    20 |    0 | 14.5 | 4.5 | 24.5 | 14.5 | 14.5 | 14.5 |  4.5 |  4.5 | 14.5 |      | f      | f         | t      | f     | f           | f       | f
+  3 | $21 a Day Once a Month   | 1941 |      7 |        |    8.2 |     5 |    0 |    0 |   0 |    0 |    0 | 24.5 |    0 | 44.5 | 24.5 | 24.5 |      | f      | t         | f      | f     | f           | f       | t
+  4 | $40,000                  | 1996 |     70 |        |    8.2 |     6 | 14.5 |    0 |   0 |    0 |    0 |    0 |    0 |    0 | 34.5 | 45.5 |      | f      | f         | t      | f     | f           | f       | f
+  5 | $50,000 Climax Show, The | 1975 |     71 |        |    3.4 |    17 | 24.5 |  4.5 |   0 | 14.5 | 14.5 |  4.5 |    0 |    0 |    0 | 24.5 |      | f      | f         | f      | f     | f           | f       | f
+  6 | $pent                    | 2000 |     91 |        |    4.3 |    45 |  4.5 |  4.5 | 4.5 | 14.5 | 14.5 | 14.5 |  4.5 |  4.5 | 14.5 | 14.5 |      | f      | f         | f      | t     | f           | f       | f
+  7 | $windle                  | 2002 |     93 |        |    5.3 |   200 |  4.5 |    0 | 4.5 |  4.5 | 24.5 | 24.5 | 14.5 |  4.5 |  4.5 | 14.5 | R    | t      | f         | f      | t     | f           | f       | f
+  8 | '15'                     | 2002 |     25 |        |    6.7 |    24 |  4.5 |  4.5 | 4.5 |  4.5 |  4.5 | 14.5 | 14.5 | 14.5 |  4.5 | 14.5 |      | f      | f         | f      | f     | t           | f       | t
+  9 | '38                      | 1987 |     97 |        |    6.6 |    18 |  4.5 |  4.5 | 4.5 |    0 |    0 |    0 | 34.5 | 14.5 |  4.5 | 24.5 |      | f      | f         | f      | t     | f           | f       | f
+ 10 | '49-'17                  | 1917 |     61 |        |      6 |    51 |  4.5 |    0 | 4.5 |  4.5 |  4.5 | 44.5 | 14.5 |  4.5 |  4.5 |  4.5 |      | f      | f         | f      | f     | f           | f       | f
+(10 rows)
+```
+
+### Using `GROUP BY` to aggregate results
+
+Aggregation is performed by using `GROUP BY`.
+
+```sql
+-- an invalid GROUP BY query
+SELECT * FROM movies
+  GROUP BY rating;
+
+ERROR:  column "movies.id" must appear in the GROUP BY clause or be used in an aggregate function
+LINE 1: SELECT * FROM movies GROUP BY rating;
+```
+
+The problem here is that we're grouping by `rating`, but we're attempting to
+retrieve all columns in the query. Because many, if not all, rows will have
+unique values, `GROUP BY` throws an error, because it can't group rows that have
+a common `rating` value, but have differing other columns.
+
+To address this we need the column we're grouping by in our `SELECT` statement's
+columns:
+
+```sql
+SELECT rating FROM movies
+  GROUP BY rating;
+
+ rating
+--------
+    5.6
+    7.5
+    8.8
+    ...
+    9.2
+    6.5
+    1.8
+(91 rows)
+```
+
+### Using `ORDER BY` to order the results of a query
+
+The above example is in no discernable order. This can be corrected by using
+`ORDER BY`:
+
+```sql
+SELECT rating FROM movies
+  GROUP BY rating
+  ORDER BY rating;
+
+ rating
+--------
+      1
+    1.1
+    1.2
+    ...
+    9.8
+    9.9
+     10
+(91 rows)
+```
+
+We could also specify the number of the column in the `SELECT` statement's
+columns to determine which columnd to order the results by:
+
+```sql
+SELECT rating FROM movies
+  GROUP BY rating
+  ORDER BY 1;
+
+ rating
+--------
+      1
+    1.1
+    1.2
+    ...
+    9.8
+    9.9
+     10
+(91 rows)
+```
+
+In this query, 1 represents `rating`.
