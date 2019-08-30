@@ -30,6 +30,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
   - [Using `ROUND` to get estimates](#using-round-to-get-estimates)
   - [Aggregating on multiple fields using `CASE ... WHEN ... THEN ... ELSE ... END`](#aggregating-on-multiple-fields-using-case--when--then--else--end)
   - [Simplifying queries by using `WITH` to create temporary tables](#simplifying-queries-by-using-with-to-create-temporary-tables)
+- [7. Sort Postgres Tables](#7-sort-postgres-tables)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -961,3 +962,6 @@ SELECT genre, COUNT(*) FROM genres
  short       |  2724
 (8 rows)
 ```
+
+
+## 7. Sort Postgres Tables
