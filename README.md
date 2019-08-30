@@ -29,6 +29,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
   - [Using `ORDER BY` to order the results of a query](#using-order-by-to-order-the-results-of-a-query)
   - [Using `ROUND` to get estimates](#using-round-to-get-estimates)
   - [Aggregating on multiple fields using `CASE ... WHEN ... THEN ... ELSE ... END`](#aggregating-on-multiple-fields-using-case--when--then--else--end)
+  - [Simplifying queries by using `WITH` to create temporary tables](#simplifying-queries-by-using-with-to-create-temporary-tables)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -915,4 +916,48 @@ SELECT title,
  '38                      | drama
  '49-'17                  | other
 (10 rows)
+```
+
+### Simplifying queries by using `WITH` to create temporary tables
+
+The query above is becoming quite unwieldy, so we can leverage SQL's `WITH`
+statement to break our query down into discrete temporary tables. A temporary
+table created using a `With` statement may also be referred to as a **Common
+Table Expression** or CTE.
+
+We can separate the `genre` aspect of our query into its own query:
+
+```sql
+-- create a temporary table called genres
+WITH genres AS (
+  SELECT title,
+    CASE
+      WHEN action = true THEN 'action'
+      WHEN animation = true THEN 'animation'
+      WHEN comedy = true THEN 'comedy'
+      WHEN drama = true THEN 'drama'
+      WHEN documentary = true THEN 'documentary'
+      WHEN romance = true THEN 'romance'
+      WHEN short = true THEN 'short'
+      ELSE 'other'
+      END AS genre
+    FROM movies
+)
+
+-- query against our temporary genres table
+SELECT genre, COUNT(*) FROM genres
+  GROUP BY genre -- or alterntively, 1
+  ORDER BY 1;
+
+    genre    | count
+-------------+-------
+ action      |  4688
+ animation   |  3606
+ comedy      | 14269
+ documentary |  3183
+ drama       | 16952
+ other       | 12786
+ romance     |   580
+ short       |  2724
+(8 rows)
 ```
