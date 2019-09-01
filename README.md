@@ -31,6 +31,8 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
   - [Aggregating on multiple fields using `CASE ... WHEN ... THEN ... ELSE ... END`](#aggregating-on-multiple-fields-using-case--when--then--else--end)
   - [Simplifying queries by using `WITH` to create temporary tables](#simplifying-queries-by-using-with-to-create-temporary-tables)
 - [7. Sort Postgres Tables](#7-sort-postgres-tables)
+  - [Ascending vs descending sort](#ascending-vs-descending-sort)
+  - [Sorting within sorted results](#sorting-within-sorted-results)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -963,5 +965,154 @@ SELECT genre, COUNT(*) FROM genres
 (8 rows)
 ```
 
-
 ## 7. Sort Postgres Tables
+
+Let's start with a new database:
+
+```bash
+# connect to docker container
+$ docker-compose exec get_started_with_postgresql bash
+
+$ createdb sort -U postgres
+$ psql -U posgres
+> \l
+                                 List of databases
+   Name    |  Owner   | Encoding |  Collate   |   Ctype    |   Access privileges
+-----------+----------+----------+------------+------------+-----------------------
+ ...
+ sort      | postgres | UTF8     | en_US.utf8 | en_US.utf8 |
+ ...
+
+>\c sort
+You are now connected to database "sort" as user "postgres".
+```
+
+And let's create a `friends` table and insert data:
+
+```sql
+CREATE TABLE friends (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  friend_count INT NOT NULL
+);
+
+INSERT INTO friends (name, friend_count)
+  VALUES
+  ('Corey', 553),
+  ('Tag', 3149),
+  ('Sean', 234),
+  ('Crowe', 123),
+  ('Cambria', 23100),
+  ('Sophia', 2131),
+  ('Andrew', 2131);
+
+SELECT * FROM friends;
+
+ id |  name   | friend_count
+----+---------+--------------
+  1 | Corey   |          553
+  2 | Tag     |         3149
+  3 | Sean    |          234
+  4 | Crowe   |          123
+  5 | Cambria |        23100
+  6 | Sophia  |         2131
+  7 | Andrew  |         2131
+(7 rows)
+```
+
+### Ascending vs descending sort
+
+We know how to order by a specific columns now:
+
+```sql
+SELECT * FROM friends
+  ORDER BY friend_count;
+
+ id |  name   | friend_count
+----+---------+--------------
+  4 | Crowe   |          123
+  3 | Sean    |          234
+  1 | Corey   |          553
+  6 | Sophia  |         2131
+  7 | Andrew  |         2131
+  2 | Tag     |         3149
+  5 | Cambria |        23100
+(7 rows)
+```
+
+This is ascending by default, which is the equivalent of the following explicit
+ascneding sort:
+
+```sql
+SELECT * FROM friends
+  ORDER BY friend_count ASC;
+
+ id |  name   | friend_count
+----+---------+--------------
+  4 | Crowe   |          123
+  3 | Sean    |          234
+  1 | Corey   |          553
+  6 | Sophia  |         2131
+  7 | Andrew  |         2131
+  2 | Tag     |         3149
+  5 | Cambria |        23100
+(7 rows)
+```
+
+We can sort in descending order using the `DESC` keyword:
+
+```sql
+SELECT * FROM friends
+  ORDER BY friend_count DESC;
+
+ id |  name   | friend_count
+----+---------+--------------
+  5 | Cambria |        23100
+  2 | Tag     |         3149
+  7 | Andrew  |         2131
+  6 | Sophia  |         2131
+  1 | Corey   |          553
+  3 | Sean    |          234
+  4 | Crowe   |          123
+(7 rows)
+```
+
+### Sorting within sorted results
+
+In our first query  we get _Sophia_ followed by _Andrew_. To sort multiple columns,
+we can specify multiple columns:
+
+```sql
+SELECT * FROM friends
+  ORDER BY friend_count, name;
+
+ id |  name   | friend_count
+----+---------+--------------
+  4 | Crowe   |          123
+  3 | Sean    |          234
+  1 | Corey   |          553
+  7 | Andrew  |         2131
+  6 | Sophia  |         2131
+  2 | Tag     |         3149
+  5 | Cambria |        23100
+(7 rows)
+```
+ and we get _Andrew_ before _Sophia_.
+
+ We can go a step further and order each column either `ASC` or `DESC`:
+
+ ```sql
+SELECT * FROM friends
+  ORDER BY friend_count DESC, name DESC;
+
+ id |  name   | friend_count
+----+---------+--------------
+  5 | Cambria |        23100
+  2 | Tag     |         3149
+  6 | Sophia  |         2131
+  7 | Andrew  |         2131
+  1 | Corey   |          553
+  3 | Sean    |          234
+  4 | Crowe   |          123
+(7 rows)
+ ```
