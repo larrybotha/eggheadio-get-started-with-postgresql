@@ -33,6 +33,10 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
 - [7. Sort Postgres Tables](#7-sort-postgres-tables)
   - [Ascending vs descending sort](#ascending-vs-descending-sort)
   - [Sorting within sorted results](#sorting-within-sorted-results)
+- [8. Ensure Uniqueness in Postgres](#8-ensure-uniqueness-in-postgres)
+  - [Adding a uniqueness constraint](#adding-a-uniqueness-constraint)
+  - [Adding a constraint on table creation](#adding-a-constraint-on-table-creation)
+  - [Adding a constraint that is a combination of columns](#adding-a-constraint-that-is-a-combination-of-columns)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -269,7 +273,7 @@ recreating them before inserting data:
 ```sql
 INSERT INTO directors (name)
   VALUES
-    ('Quention Tarantino'), ('Judd Apatow'), ('Mel Brooks');
+    ('Quentin Tarantino'), ('Judd Apatow'), ('Mel Brooks');
 
 INSERT INTO movies (title, release_date, count_stars, director_id)
   VALUES
@@ -1116,3 +1120,127 @@ SELECT * FROM friends
   4 | Crowe   |          123
 (7 rows)
  ```
+
+## 8. Ensure Uniqueness in Postgres
+
+In our movies table we currently don't have anything preventing us from adding
+the same director:
+
+```sql
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+
+SELECT * FROM directors;
+
+ id |       name
+----+-------------------
+  1 | Quentin Tarantino
+  2 | Judd Apatow
+  3 | Mel Brooks
+  4 | Quentin Tarantino
+(4 rows)
+```
+
+### Adding a uniqueness constraint
+
+We can enforce uniqueness by enforcing it as a constraint on a column:
+
+```sql
+ALTER TABLE directors
+-- [        1        ]
+  ADD CONSTRAINT directors_name_unique UNIQUE(name);
+--  [2]                 [3]             [4]    [5]
+
+-- [1] we want to alter the directors table
+-- [2] by adding a constraint
+-- [3] with a name of directors_name_unique
+-- [4] with a UNIQUE constraint
+-- [5] on the name column
+
+ERROR:  could not create unique index "directors_unique_name"
+DETAIL:  Key (name)=(Quentin Tarantino) is duplicated.
+```
+
+We got an error here because we already have a row that violates the constraint.
+We need to first ensure our table meets the constraints before adding the
+constraints:
+
+```sql
+DELETE FROM directors WHERE id = 4;
+
+ALTER TABLE directors
+  ADD CONSTRAINT directors_name_unique UNIQUE(name);
+```
+
+We can now evaluate that the condition holds:
+
+```sql
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+
+ERROR:  duplicate key value violates unique constraint "directors_unique_name"
+DETAIL:  Key (name)=(Quentin Tarantino) already exists.
+```
+
+We now get the error we expect when attempting to add a new row that violates
+the uniqueness constraint on the `name` column.
+
+### Adding a constraint on table creation
+
+Let's drop our `directors` db, and then add the constraint on creation:
+
+```sql
+-- drop directors
+DROP TABLE directors;
+
+-- create directors with the uniqueness constraint on name
+CREATE TABLE directors (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE
+);
+
+-- seed our table
+INSERT INTO directors (name)
+  VALUES
+    ('Quentin Tarantino'), ('Judd Apatow'), ('Mel Brooks');
+```
+
+Now we can evaluate adding a row that violates uniqueness again:
+
+```sql
+INSERT INTO directors (name) VALUES ('Quentin Tarantino');
+
+ERROR:  duplicate key value violates unique constraint "directors_name_key"
+DETAIL:  Key (name)=(Quentin Tarantino) already exists.
+```
+
+### Adding a constraint that is a combination of columns
+
+In our movies table it wouldn't be so useful to constrain uniqueness to titles
+only, since movies are often remade.
+
+Instead, we can add both the title and release date to the same constraint:
+
+```sql
+ALTER TABLE movies
+  ADD CONSTRAINT unique_title_and_release UNIQUE(title, release_date);
+
+SELECT * FROM movies;
+
+ id |      title      | release_date | count_stars | director_id
+----+-----------------+--------------+-------------+-------------
+  2 | Funny People    | 2009-07-20   |           1 |           2
+  3 | Blazing Saddles | 1974-02-07   |           1 |           3
+  1 | Kill Bill       | 2003-10-10   |           5 |           1
+(3 rows)
+```
+
+If we now attempt to add another `Kill Bill` with the same release date, we'll
+get an error:
+
+```sql
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES
+    ('Kill Bill', '2003-10-10', 5, 1);
+
+ERROR:  duplicate key value violates unique constraint "unique_title_and_release"
+DETAIL:  Key (title, release_date)=(Kill Bill, 2003-10-10) already exists.
+```
