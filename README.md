@@ -37,6 +37,7 @@ Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get 
   - [Adding a uniqueness constraint](#adding-a-uniqueness-constraint)
   - [Adding a constraint on table creation](#adding-a-constraint-on-table-creation)
   - [Adding a constraint that is a combination of columns](#adding-a-constraint-that-is-a-combination-of-columns)
+- [9. Use Foreign Keys to Ensure Data Integrity in Postgres](#9-use-foreign-keys-to-ensure-data-integrity-in-postgres)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -1243,4 +1244,69 @@ INSERT INTO movies (title, release_date, count_stars, director_id)
 
 ERROR:  duplicate key value violates unique constraint "unique_title_and_release"
 DETAIL:  Key (title, release_date)=(Kill Bill, 2003-10-10) already exists.
+```
+
+## 9. Use Foreign Keys to Ensure Data Integrity in Postgres
+
+Up until now we've been providing ids for directors in our movies table, but we
+don't have a real association with the rows in the directors table.
+
+To increase integrity of our data, we can use SQL's `REFERENCES` keyword to
+create a relation. The `REFERENCES` keyword creates a foreign key on the table,
+creating a relation between the table in which the key resides, and the table
+the key references.
+
+Let's drop our movies table, and recreate it with a foreign key constraint for
+the `director_id` column:
+
+````sql
+DROP TABLE moviesl
+
+CREATE TABLE movies (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR(100) NOT NULL,
+  release_date DATE,
+  count_stars INTEGER,
+  director_id INTEGER REFERENCES directors(id)
+);
+```
+
+We can now add data to the table:
+
+```sql
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES
+    ('Kill Bill', '10-10-2003', 3, 1),
+    ('Funny people', '07-20-2009', 5, 2)
+    ('Barton Fink', '09-21-1991', 5, 4);
+
+ERROR:  insert or update on table "movies" violates foreign key constraint "movies_director_id_fkey"
+DETAIL:  Key (director_id)=(4) is not present in table "directors".
+```
+
+Because we attempted to add a movie that references an id of a director that
+doesn't exist in the directors table, we get an error.
+
+To address this, we can add another row to our directors table, and then insert
+our movies:
+
+```sql
+INSERT INTO directors (name)
+  VALUES ('Coen Brothers');
+
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES
+    ('Kill Bill', '10-10-2003', 3, 1),
+    ('Funny people', '07-20-2009', 5, 2)
+    ('Barton Fink', '09-21-1991', 5, 4);
+
+SELECT * FROM directors;
+
+ id |       name
+----+-------------------
+  1 | Quentin Tarantino
+  2 | Judd Apatow
+  3 | Mel Brooks
+  4 | Coen Brothers
+(4 rows)
 ```
