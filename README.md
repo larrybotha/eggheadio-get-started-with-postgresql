@@ -1310,3 +1310,163 @@ SELECT * FROM directors;
   4 | Coen Brothers
 (4 rows)
 ```
+
+## 10. Create Foreign Keys Across Multiple Fields in Postgres
+
+A table can have foreign keys that contain multiple fields.
+
+Before evaluating this, we'll need a few more tables:
+
+```sql
+-- stores where movies may be rented from
+CREATE TABLE stores (
+  id SERIAL PRIMARY KEY,
+  location VARCHAR(200)
+);
+
+-- rentable movies
+CREATE TABLE rentable_movies (
+  movie_id INTEGER NOT NULL REFERENCES movies(id),
+  store_id INTEGER NOT NULL REFERENCES stores(id),
+  copy_number INTEGER NOT NULL,
+  -- create a primary key based on other fields for each record
+  PRIMARY KEY (movie_id, store_id, copy_number)
+);
+
+-- guests
+CREATE TABLE guests (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  email VARCHAR(200) NOT NULL
+);
+```
+
+---
+
+**Aside:** A transaction can be used to cretae a block containing multiple queries.
+If any query fails, none of the queries are executed. This can be done using `BEGIN`
+and `COMMIT`:
+
+```sql
+BEGIN
+-- stores where movies may be rented from
+CREATE TABLE stores (
+  id SERIAL PRIMARY KEY,
+  location VARCHAR(200)
+);
+
+-- rentable movies
+CREATE TABLE rentable_movies (
+  movie_id INTEGER NOT NULL REFERENCES movies(id),
+  store_id INTEGER NOT NULL REFERENCES stores(id),
+  copy_number INTEGER NOT NULL,
+  -- create a primary key based on other fields for each record
+  PRIMARY KEY (movie_id, store_id, copy_number)
+);
+
+-- guests
+CREATE TABLE guests (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(200) NOT NULL,
+  email VARCHAR(200) NOT NULL
+)
+-- SQL error - no semicolon
+
+COMMIT;
+
+-- no tables created from the above queries
+ERROR:  syntax error at or near "COMMIT"
+LINE 7: COMMIT;
+        ^
+```
+
+---
+
+`rentable_movies` has a primary key generated from 3 other fields. This isn't a
+recommended way to identify rows in a table; a unique id should instead be
+generated. This example is to demonstrate how to work with tables that happen to
+have been modeled in this way.
+
+Now that we have those tables, we can configure a table that references the
+`rentable_movies` table; `rentings`:
+
+```sql
+CREATE TABLE rentings (
+  guest_id INTEGER NOT NULL REFERENCES guests(id),
+  movie_id INTEGER NOT NULL,
+  store_id INTEGER NOT NULL,
+  copy_number INTEGER NOT NULL,
+  due_back DATE,
+  returned BOOLEAN,
+  FOREIGN KEY (movie_id, store_id, copy_number) REFERENCES rentable_movies(movie_id, store_id, copy_number)
+  --    [1]   [               2               ] [                     3                    ]
+);
+
+-- [1] we explicitly use the FOREIGN KEY statement, as we need to define
+--    multiple keys in the current table that form the foreign key
+-- [2] the fields in this table that will be used as for the foreign key
+-- [3] the refernced fields on the rentable_movies table; i.e. the fields of
+--    rentable_movies' primary key
+);
+```
+
+Now we'll need some data:
+
+```sql
+INSERT INTO guests (name, email)
+  VALUES ('John Doe', 'john@doe.com'), ('Jane Doe', 'jane@doe.com');
+
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES
+    ('Kill Bill', '2003-10-10', 3, 1),
+    ('Funny People', '2009-07-20', 5, 2);
+
+INSERT INTO stores (location)
+  VALUES ('San Francisco'), ('Philadelphia');
+
+INSERT INTO rentable_movies (movie_id, store_id, copy_number)
+  VALUES (1, 1, 1), (1, 1, 2), (2, 1, 1), (2, 2, 1);
+```
+
+### Inserting into a table with a foreign key constraint violation
+
+If we attempt to add a record to a table that has a foreign key constraint, and
+any of the references values provided for the foreign key don't exist, we'll get
+an error:
+
+```sql
+INSERT INTO rentings (guest_id, movie_id, store_id, copy_number, due_back, returned)
+  VALUES (
+    1,
+    -- provide an invalid movie id
+    3,
+    1,
+    1,
+    '01-01-1991',
+    false
+  );
+
+ERROR:  insert or update on table "rentings" violates foreign key constraint "rentings_movie_id_fkey"
+DETAIL:  Key (movie_id, store_id, copy_number)=(3, 1, 1) is not present in table "rentable_movies".
+```
+
+Inserting a renting with a valid movie id will succeed:
+
+```sql
+INSERT INTO rentings (guest_id, movie_id, store_id, copy_number, due_back, returned)
+  VALUES (
+    1,
+    1,
+    1,
+    1,
+    '01-01-1991',
+    false
+  );
+
+SELECT * FROM rentings;
+
+ guest_id | movie_id | store_id | copy_number |  due_back  | returned
+----------+----------+----------+-------------+------------+----------
+        1 |        1 |        1 |           1 | 1991-01-01 | f
+(1 row)
+```
