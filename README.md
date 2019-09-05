@@ -1516,3 +1516,39 @@ DETAIL:  Failing row contains (11, Barton Fink, 1991-09-21, 0, 4).
 INSERT INTO movies (title, release_date, count_stars, director_id)
   VALUES ('Barton Fink', '09-21-1991', 3, 4);
 ```
+
+## 11. Speed Up Postgres Queries with Indexes
+
+For large databases we can end up experiencing performance issues when making
+queries. e.g. a table with 3 million rows can result in queries that take over a
+second to return a result. This is incredibly slow, and can bring down a server.
+
+### Using `EXPLAIN` to evaluate a query
+
+We can get the execution plan of a query by using the `EXPLAIN` keyword:
+
+```sql
+EXPLAIN SELECT * FROM movies WHERE title = 'Barton Fink';
+
+                       QUERY PLAN
+---------------------------------------------------------
+ Seq Scan on movies  (cost=0.00..13.88 rows=2 width=234)
+   Filter: ((title)::text = 'Barton Fink'::text)
+(2 rows)
+```
+
+If this query were taking long, we could add an index to it to speed up lookups.
+Postgres allows for indexes to be added without locking the database up.
+Whenever there's an opportunity to run a query that won't lock up the database,
+it's a good idea to consider using it.
+
+```sql
+CREATE INDEX CONCURRENTLY index_movies_on_title ON movies(title);
+```
+
+Creating indexes can take a fair amount of time (+-1 minute for +-3m rows in the
+video). You don't want to be running an index that locks the database for that
+long!
+
+With titles indexed on our movies table, queries that use the title will be much
+faster.
