@@ -1470,3 +1470,49 @@ SELECT * FROM rentings;
         1 |        1 |        1 |           1 | 1991-01-01 | f
 (1 row)
 ```
+
+## 10. Enforce Custom Logic with `CHECK` Constraints in Postgres
+
+Currently there are no constraints on the data inserted into our tables. e.g. if
+we wanted to ensure that `count_stars` is always an integer from 1 to 5, there's
+nothing stopping an insertion outside of that range.
+
+To add a `CHECK` constraint to our `movies` table we can do the following:
+
+```sql
+ALTER TABLE movies
+-- [      1      ]
+  ADD CONSTRAINT count_stars_gte_one CHECK(count_stars >= 1);
+--  [     2    ]        [3]          [          3          ]
+
+ALTER TABLE movies
+  ADD CONSTRAINT count_stars_lte_five CHECK(count_stars <= 5);
+
+-- [1] indicate that we're altering the movies table
+-- [2] by adding a constraint
+-- [3] with the name of count_stars_gte_one
+-- [4] checking for a supplised constraint
+```
+
+We can now evaluate that our new checks prevent invalid data from being
+inserted:
+
+```sql
+-- insert moview with count_stars > 5
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES ('Barton Fink', '09-21-1991', 6, 4);
+
+ERROR:  new row for relation "movies" violates check constraint "count_stars_lte_five"
+DETAIL:  Failing row contains (10, Barton Fink, 1991-09-21, 6, 4).
+
+-- insert moview with count_stars < 1
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES ('Barton Fink', '09-21-1991', 0, 4);
+
+ERROR:  new row for relation "movies" violates check constraint "count_stars_gte_one"
+DETAIL:  Failing row contains (11, Barton Fink, 1991-09-21, 0, 4).
+
+-- just right
+INSERT INTO movies (title, release_date, count_stars, director_id)
+  VALUES ('Barton Fink', '09-21-1991', 3, 4);
+```
