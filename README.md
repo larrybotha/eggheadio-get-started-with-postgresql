@@ -1552,3 +1552,170 @@ long!
 
 With titles indexed on our movies table, queries that use the title will be much
 faster.
+
+## 10. Find Intersecting Data with Postgres’ Inner Join
+
+An `INNER JOIN` returns all intersecting data of tables. If there is no match
+between rows of the tables in the join, those rows will not be incuded in the
+result. This differs from a `LEFT` or `RIGHT` join, where the table on the side
+specified will have all rows returned, with non-matching rows of the other table
+populated with `NULL`.
+
+Let's get a single table where the movie ids match those in the `rentable_movies`
+table:
+
+```sql
+SELECT * FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id;
+
+ movie_id | store_id | copy_number | id |    title     | release_date | count_stars | director_id
+----------+----------+-------------+----+--------------+--------------+-------------+-------------
+        1 |        1 |           1 |  1 | Kill Bill    | 2003-10-10   |           3 |           1
+        1 |        1 |           2 |  1 | Kill Bill    | 2003-10-10   |           3 |           1
+        2 |        1 |           1 |  2 | Funny People | 2009-07-20   |           5 |           2
+        2 |        2 |           1 |  2 | Funny People | 2009-07-20   |           5 |           2
+-- [              1               ] [                             2                             ]
+(4 rows)
+
+-- [1] columns from rentable_movies
+-- [2] columns from movies
+```
+
+We can see that the rows in `rentable_movies` align with their associated
+`movies` rows where the movie ids match.
+
+### Multiple joins
+
+We can join additional tables to already joined tables. Let's get the locations
+of stores for each rentable movie:
+
+```sql
+SELECT * FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id
+  INNER JOIN stores ON stores.id = rentable_movies.store_id;
+
+ movie_id | store_id | copy_number | id |    title     | release_date | count_stars | director_id | id |   location
+----------+----------+-------------+----+--------------+--------------+-------------+-------------+----+---------------
+        1 |        1 |           1 |  1 | Kill Bill    | 2003-10-10   |           3 |           1 |  1 | San Francisco
+        1 |        1 |           2 |  1 | Kill Bill    | 2003-10-10   |           3 |           1 |  1 | San Francisco
+        2 |        1 |           1 |  2 | Funny People | 2009-07-20   |           5 |           2 |  1 | San Francisco
+        2 |        2 |           1 |  2 | Funny People | 2009-07-20   |           5 |           2 |  2 | Philadelphia
+-- [                1             ] [                               2                            ] [         3       ]
+(4 rows)
+
+-- [1] columns from rentable_movies
+-- [2] columns from movies
+-- [2] store columns
+```
+
+This can get overwhelming, as there's a lot of information, and we have multiple
+columns with the same name. We can select which fields we want to show, instead:
+
+```sql
+SELECT rentable_movies.*, movies.title, stores.location
+  FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id
+  INNER JOIN stores ON stores.id = rentable_movies.store_id;
+
+ movie_id | store_id | copy_number |    title     |   location
+----------+----------+-------------+--------------+---------------
+        1 |        1 |           1 | Kill Bill    | San Francisco
+        1 |        1 |           2 | Kill Bill    | San Francisco
+        2 |        1 |           1 | Funny People | San Francisco
+        2 |        2 |           1 | Funny People | Philadelphia
+(4 rows)
+```
+
+### Joining on multiple conditions
+
+We can also join on `rentals`, but the relation has more than 1 field, so we'll
+need to account for that by using multiple conditions in our `ON` statementL
+
+```sql
+SELECT rentable_movies.*, movies.title, stores.location
+  FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id
+  INNER JOIN stores ON stores.id = rentable_movies.store_id
+  INNER JOIN rentings ON (
+    rentings.movie_id = rentable_movies.movie_id AND
+    rentings.store_id = rentable_movies.store_id AND
+    rentings.copy_number = rentable_movies.copy_number
+  );
+
+ movie_id | store_id | copy_number |   title   |   location
+----------+----------+-------------+-----------+---------------
+        1 |        1 |           1 | Kill Bill | San Francisco
+(1 row)
+```
+
+And we can add all `rentings` columns to the query:
+
+```sql
+SELECT rentable_movies.*, movies.title, stores.location, rentings.returned
+  FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id
+  INNER JOIN stores ON stores.id = rentable_movies.store_id
+  INNER JOIN rentings ON (
+    rentings.movie_id = rentable_movies.movie_id AND
+    rentings.store_id = rentable_movies.store_id AND
+    rentings.copy_number = rentable_movies.copy_number
+  );
+
+ movie_id | store_id | copy_number |   title   |   location    | returned
+----------+----------+-------------+-----------+---------------+----------
+        1 |        1 |           1 | Kill Bill | San Francisco | f
+(1 row)
+```
+
+And finally let's get the information of the guest who rented the movie:
+
+```sql
+SELECT
+  rentable_movies.*,
+  movies.title,
+  stores.location,
+  rentings.returned,
+  guests.name,
+  guests.email
+  FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id
+  INNER JOIN stores ON stores.id = rentable_movies.store_id
+  INNER JOIN rentings ON (
+    rentings.movie_id = rentable_movies.movie_id AND
+    rentings.store_id = rentable_movies.store_id AND
+    rentings.copy_number = rentable_movies.copy_number
+  )
+  INNER JOIN guests ON guests.id = rentings.guest_id;
+
+ movie_id | store_id | copy_number |   title   |   location    | returned |   name   |    email
+----------+----------+-------------+-----------+---------------+----------+----------+--------------
+        1 |        1 |           1 | Kill Bill | San Francisco | f        | John Doe | john@doe.com
+(1 row)
+```
+
+The information from `rentable_movies` isn't even necessary anymore; we can make
+our table more succinct:
+
+```sql
+SELECT
+  movies.title,
+  stores.location,
+  rentings.returned,
+  rentings.due_back,
+  guests.name,
+  guests.email
+  FROM rentable_movies
+  INNER JOIN movies ON movies.id = rentable_movies.movie_id
+  INNER JOIN stores ON stores.id = rentable_movies.store_id
+  INNER JOIN rentings ON (
+    rentings.movie_id = rentable_movies.movie_id AND
+    rentings.store_id = rentable_movies.store_id AND
+    rentings.copy_number = rentable_movies.copy_number
+  )
+  INNER JOIN guests ON guests.id = rentings.guest_id;
+
+   title   |   location    | returned |  due_back  |   name   |    email
+-----------+---------------+----------+------------+----------+--------------
+ Kill Bill | San Francisco | f        | 1991-01-01 | John Doe | john@doe.com
+(1 row)
+```
