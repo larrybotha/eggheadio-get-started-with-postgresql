@@ -1719,3 +1719,66 @@ SELECT
  Kill Bill | San Francisco | f        | 1991-01-01 | John Doe | john@doe.com
 (1 row)
 ```
+
+## 12. Select Distinct Data in Postgres
+
+If we make queries where there are multiple rows returning the same data, it's
+likely that we'd want only to see distinct rows. To do this, we can use the
+`DISTINCT` keyword.
+
+Let's add some data so that we have duplicate rows:
+
+```sql
+INSERT INTO movies (title)
+  VALUES
+    ('American History X'),
+    ('American History Y'),
+    ('American History Z'),
+    ('American History X');
+```
+
+If we select our movies we'll see that we have two American History X's:
+
+
+```sql
+SELECT title FROM movies;
+
+       title
+--------------------
+ Kill Bill
+ Funny People
+ Barton Fink
+ American History X
+ American History Y
+ American History Z
+ American History X
+(7 rows)
+````
+
+We can select distinct titles be prepending the selections with `DISTINCT`:
+
+```sql
+SELECT DISTINCT title FROM movies
+  ORDER BY 1;
+
+       title
+--------------------
+ American History X
+ American History Y
+ American History Z
+ Barton Fink
+ Funny People
+ Kill Bill
+(6 rows)
+```
+
+We can also count by distinct rows:
+
+```sql
+SELECT COUNT(DISTINCT title) FROM movies;
+
+ count
+-------
+     6
+(1 row)
+```
