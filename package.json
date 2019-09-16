@@ -4,7 +4,8 @@
   "description": "Notes and annotations from Egghead.io's Get Started With PostgreSQL course: Get Started With PostgreSQL",
   "main": ".huskyrc.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:start": "docker-compose up",
+    "db:connect": "docker-compose exec get_started_with_postgresql psql -U postgres"
   },
   "repository": {
     "type": "git",
