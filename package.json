@@ -19,7 +19,7 @@
   },
   "homepage": "https://github.com/larrybotha/eggheadio-get-started-with-postgresql#readme",
   "devDependencies": {
-    "doctoc": "^1.4.0",
+    "doctoc": "^2.2.1",
     "husky": "^3.0.4",
     "lint-staged": "^9.2.3"
   }
